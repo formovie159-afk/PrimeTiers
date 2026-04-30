@@ -1,0 +1,62 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Admin should be defined in a collection or hardcoded for bootstrap
+    // For this app, let's assume specific emails or a 'admins' collection
+    function isAdmin() {
+      return isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    // Player Validation
+    function isValidPlayer(data) {
+      return data.username is string && data.username.size() <= 16
+          && data.uuid is string && data.uuid.size() <= 36
+          && data.region in ['NA', 'EU', 'AS', 'SA', 'OC', 'AF']
+          && data.points is number
+          && (data.title == null || data.title is string)
+          && (data.globalRank == null || data.globalRank is number)
+          && (data.tiers == null || data.tiers is map)
+          && (data.updatedAt == null || data.updatedAt is timestamp);
+    }
+
+    match /players/{playerId} {
+      // Public read for everyone
+      allow get, list: if true;
+
+      // Only admins can create/update/delete players to keep the ranking authentic
+      allow create: if isAdmin() && isValidPlayer(incoming()) && isValidId(playerId);
+      allow update: if isAdmin() && isValidPlayer(incoming())
+                    && incoming().diff(existing()).affectedKeys().hasOnly([
+                      'username', 'uuid', 'region', 'points', 'globalRank', 'title', 'tiers', 'updatedAt'
+                    ]);
+      allow delete: if isAdmin();
+    }
+
+    match /admins/{userId} {
+      allow read: if isSignedIn() && request.auth.uid == userId;
+      allow write: if false; // Only manageable via console for safety
+    }
+  }
+}

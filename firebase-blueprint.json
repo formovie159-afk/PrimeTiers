@@ -1,0 +1,29 @@
+{
+  "entities": {
+    "Player": {
+      "title": "Player",
+      "description": "A competitive Minecraft PvP player profile",
+      "type": "object",
+      "properties": {
+        "username": { "type": "string", "description": "Minecraft username" },
+        "uuid": { "type": "string", "description": "Minecraft UUID" },
+        "region": { "type": "string", "description": "Player region (NA, EU, AS, etc.)", "enum": ["NA", "EU", "AS", "SA", "OC", "AF"] },
+        "points": { "type": "number", "description": "Total ranking points" },
+        "globalRank": { "type": "number", "description": "Current position on the leaderboard" },
+        "title": { "type": "string", "description": "Player title (e.g., Combat Grandmaster)" },
+        "tiers": {
+          "type": "object",
+          "description": "Map of category IDs to tier strings (HT1, LT1, etc.)"
+        },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["username", "uuid", "region", "points"]
+    }
+  },
+  "firestore": {
+    "players": {
+      "schema": "Player",
+      "description": "Collection of all ranked players"
+    }
+  }
+}
